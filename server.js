@@ -108,7 +108,7 @@ function Caller (sessionId, token) {
   // Time when the call started
   this.onCallSince = null
   // Whether caller is ready. This is set to true only after caller has successfully connected to OpenTok.
-  this.ready = true
+  this.ready = false
   // Name for this caller.
   this.callerName = null
   // Reason for call
