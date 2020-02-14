@@ -30,6 +30,14 @@
             v-if="!caller.agentConnected && !caller.onHold"
             class="uk-button uk-button-primary">Accept</button>
           <button
+            @click="shareScreen(caller.callerId)"
+            v-if="caller.agentConnected && !caller.onHold && !screenShare"
+            class="uk-button uk-button-primary">Share Screen</button>
+          <button
+            @click="stopShareScreen(caller.callerId)"
+            v-if="caller.agentConnected && !caller.onHold && screenShare"
+            class="uk-button uk-button-primary">Stop Sharing Screen</button>
+          <button
             @click="unholdCall(caller.callerId)"
             v-else-if="caller.onHold"
             class="uk-button uk-button-default">Resume</button>
@@ -79,6 +87,10 @@ function errorHandler(err) {
   }
 }
 
+function stopShareScreen(callerId){
+  this.screenShare = false;
+}
+
 function setupSession(callerId) {
   this.callerSession.on('streamCreated', (event) => {
     this.callerStream = event.stream
@@ -93,6 +105,7 @@ function setupSession(callerId) {
       this.callerStream = null
       this.callerSession = null
       this.currentCaller = null
+      this.screenShare = false
     }
     this.deleteCaller(callerId)
     console.log('Connection destroyed', callerId)
@@ -128,6 +141,20 @@ function joinCall(callerId) {
     .catch(errorHandler)
 }
 
+function shareScreen(caller_id){
+let self = this;
+  OT.checkScreenSharingCapability(function(response) {
+    if(!response.supported || response.extensionRegistered === false) {
+      alert("This browser does not support screen sharing.");
+    } else if (response.extensionInstalled === false) {
+      // Prompt to install the extension.
+    } else {
+      // Screen sharing is available. Publish the screen.
+      self.screenShare = true;
+    }
+  });
+}
+
 function holdCall(callerId) {
   if (this.callerSession && this.callerSession.isConnected()) {
     this.callerSession.disconnect()
@@ -136,6 +163,7 @@ function holdCall(callerId) {
   this.currentCaller = null
   this.callerSession = null
   this.callerStream = null
+  this.screenShare = false
   axios.get(`/call/${callerId}/hold`)
     .then(res => {
       this.updateCaller(res.data.caller)
@@ -241,6 +269,7 @@ export default {
     agentid: null,
     connections: new Map(),
     currentCaller: null,
+    screenShare: false,
     callerSession: null,
     callerStream: null,
     audioVideo: 'audioVideo',
@@ -262,8 +291,16 @@ export default {
         showControls: false
       }
       if (this.audioVideo === 'audioOnly') {
-        _opts.videoSource = null
+          _opts.videoSource = null
       }
+      if(this.screenShare){
+
+         _opts.videoSource = 'screen';
+         _opts.maxResolution = { width: 1920, height: 1080 };
+
+      }
+      console.log("in agent");
+      console.log(_opts);
       return _opts
     }
   },
@@ -293,7 +330,9 @@ export default {
     fetchCallersList,
     connectAgent,
     disconnectAgent,
-    endCall
+    endCall,
+    shareScreen,
+    stopShareScreen
   }
 }
 
