@@ -19,21 +19,29 @@ export default {
     }
   },
 
+  data(){
+    return{
+      publisher: '',
+    }
+  },
+
   mounted: function() {
-    const publisher = OT.initPublisher(this.$el, this.opts, (err) => {
+    this.publisher = OT.initPublisher(this.$el, this.opts, (err) => {
       if (err) {
         this.$emit('error', err);
       } else {
         this.$emit('publisherCompleted');
       }
     });
-    this.$emit('publisherCreated', publisher);
+    console.log("In mounted");
+    console.log(this.publisher);
+    this.$emit('publisherCreated', this.publisher);
     const publish = () => {
-      this.session.publish(publisher, (err) => {
+      this.session.publish(this.publisher, (err) => {
         if (err) {
           this.$emit('error', err);
         } else {
-          this.$emit('publisherConnected', publisher);
+          this.$emit('publisherConnected', this.publisher);
         }
       });
     };
@@ -43,6 +51,39 @@ export default {
     if (this.session) {
       this.session.on('sessionConnected', publish)
     }
-  }
+  },
+
+    watch: {
+    // whenever options changes, this function will run
+    opts: function () {
+      this.session.unpublish(this.publisher);
+      this.publisher = OT.initPublisher(this.$el, this.opts, (err) => {
+        if (err) {
+          this.$emit('error', err);
+        } else {
+          this.$emit('publisherCompleted');
+        }
+      });
+      console.log("In wathcer");
+      console.log(this.publisher);
+
+      this.$emit('publisherCreated', this.publisher);
+      const publish = () => {
+        this.session.publish(this.publisher, (err) => {
+          if (err) {
+            this.$emit('error', err);
+          } else {
+            this.$emit('publisherConnected', this.publisher);
+          }
+        });
+      };
+      if (this.session && this.session.isConnected()) {
+        publish()
+      }
+      if (this.session) {
+        this.session.on('sessionConnected', publish)
+      }
+    }
+  },
 }
 </script>
